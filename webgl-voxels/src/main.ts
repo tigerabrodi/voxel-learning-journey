@@ -11,6 +11,8 @@ class VoxelRenderer {
   private mouseDown: boolean = false;
   private lastMouseX: number = 0;
   private lastMouseY: number = 0;
+  private cubePositions!: Float32Array;
+  private numCubes: number = 8;
 
   constructor(canvasId: string) {
     this.initCanvas(canvasId);
@@ -19,6 +21,7 @@ class VoxelRenderer {
     this.initGeometry();
     this.init3D();
     this.initControls();
+    this.initCubePositions();
   }
 
   private initCanvas(canvasId: string): void {
@@ -136,14 +139,50 @@ class VoxelRenderer {
     ]);
   }
 
-  private createModelViewMatrix(): Float32Array {
-    // Create rotation matrices
+  private initCubePositions(): void {
+    // Create a small grid of cube positions
+    this.cubePositions = new Float32Array([
+      -1.5,
+      -1.5,
+      0, // Bottom left
+      1.5,
+      -1.5,
+      0, // Bottom right
+      -1.5,
+      1.5,
+      0, // Top left
+      1.5,
+      1.5,
+      0, // Top right
+      -1.5,
+      -1.5,
+      2, // Back bottom left
+      1.5,
+      -1.5,
+      2, // Back bottom right
+      -1.5,
+      1.5,
+      2, // Back top left
+      1.5,
+      1.5,
+      2, // Back top right
+    ]);
+
+    console.log(`${this.numCubes} cube positions created`);
+  }
+
+  private createModelViewMatrix(cubeIndex: number): Float32Array {
     const cosX = Math.cos(this.rotationX);
     const sinX = Math.sin(this.rotationX);
     const cosY = Math.cos(this.rotationY);
     const sinY = Math.sin(this.rotationY);
 
-    // Combined rotation matrix (X then Y)
+    // Get position for this cube
+    const x = this.cubePositions[cubeIndex * 3 + 0];
+    const y = this.cubePositions[cubeIndex * 3 + 1];
+    const z = this.cubePositions[cubeIndex * 3 + 2];
+
+    // Combined rotation + translation matrix
     return new Float32Array([
       cosY,
       sinX * sinY,
@@ -157,10 +196,10 @@ class VoxelRenderer {
       sinX * cosY,
       cosX * cosY,
       0,
-      0,
-      0,
-      -3,
-      1, // Move back 3 units
+      x,
+      y,
+      z - 5,
+      1, // Position each cube + move back 5 units
     ]);
   }
 
@@ -184,28 +223,32 @@ class VoxelRenderer {
     // Clear the screen
     this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
 
-    // Create matrices
+    // Create perspective matrix once
     const perspective = this.createPerspectiveMatrix();
-    const modelView = this.createModelViewMatrix();
-    const mvpMatrix = this.multiplyMatrices(perspective, modelView);
 
-    // Upload matrix to GPU
-    this.gl.uniformMatrix4fv(this.mvpMatrixLocation, false, mvpMatrix);
-
-    // Bind geometry
+    // Bind geometry once (same for all cubes)
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
     this.gl.enableVertexAttribArray(this.positionAttributeLocation);
     this.gl.vertexAttribPointer(
       this.positionAttributeLocation,
-      3, // Now 3 components (x, y, z)
+      3,
       this.gl.FLOAT,
       false,
       0,
       0
     );
 
-    // Draw the cube (36 vertices = 12 triangles = 6 faces)
-    this.gl.drawArrays(this.gl.TRIANGLES, 0, 36);
+    // Draw each cube at its position
+    for (let i = 0; i < this.numCubes; i++) {
+      const modelView = this.createModelViewMatrix(i);
+      const mvpMatrix = this.multiplyMatrices(perspective, modelView);
+
+      // Upload matrix for this cube
+      this.gl.uniformMatrix4fv(this.mvpMatrixLocation, false, mvpMatrix);
+
+      // Draw this cube
+      this.gl.drawArrays(this.gl.TRIANGLES, 0, 36);
+    }
 
     requestAnimationFrame(() => this.render());
   }
