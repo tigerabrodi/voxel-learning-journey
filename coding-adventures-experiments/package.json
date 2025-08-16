@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:compute-shaders": "vite serve src/compute-shaders",
+    "dev:ray-marching": "vite serve src/ray-marching",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },
