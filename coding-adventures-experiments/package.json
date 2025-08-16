@@ -7,6 +7,7 @@
     "dev": "vite",
     "dev:compute-shaders": "vite serve src/compute-shaders",
     "dev:ray-marching": "vite serve src/ray-marching",
+    "dev:marching-cubes": "vite serve src/marching-cubes",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },
